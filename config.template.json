@@ -5,5 +5,10 @@
       "name": "Dev CSID",
       "type": "PLAYING"
     }
+  },
+  "commands": {
+    "roles": {
+      "etudiant": "id role"
+    }
   }
 }

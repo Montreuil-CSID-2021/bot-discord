@@ -1,12 +1,13 @@
 // - - - Node Module - - - //
 const Discord = require('discord.js')
-const fs = require('fs');
 
 // - - - Import Class - - - //
 const Logs = require("./Class/Logs")
 
 // - - - Import Config - - - //
 const config = require('./config.json')
+const CommandManager = require("./Class/CommandManager")
+const Utils = require("./Class/Utils")
 
 // - - - Client Discord - - - //
 const client = new Discord.Client({
@@ -28,43 +29,56 @@ client.on('ready', () => {
         status: "online"
     })
 
+    client.commands = new CommandManager()
+
+    client.commands.autoAddAllCommand()
+    console.log(client.commands.commandsList)
+
     Logs.info(`client discord en ligne sur le serveur : ${client.guilds.cache.map(guild => guild.name).join(', ')}`)
 })
 
 client.on('error', err => Logs.error(err));
 
-/*
-** Commands Handler
-*/
-client.commands = new Discord.Collection();
+client.on("messageCreate", async message => {
+    // Deploy slash commands
+    if((message.content === `<@!${client.user.id}> deploy slash commands`)) {
+        if(!client.application?.owner) await client.application.fetch()
+        if(client.application.owner.members.find(m => m.user.id === message.author.id)) {
+            await message.guild.commands.set(client.commands.slashData).then(commands => {
+                commands.forEach(cmd => {
+                    let permissions = client.commands.getCommandByName(cmd.name).slashPermission
+                    if(permissions && (permissions.length > 0)) cmd.permissions.set({permissions})
+                })
+            })
 
-fs.readdir("./cmds/", (err, files) => {
+            await message.reply('Déploiement des slash commands')
+        } else await message.delete()
+    }
+})
 
-  if (err) return console.log(err);
-  let jsfiles = files.filter(f => f.split(".").pop() === "js");
-  if (jsfiles.length <= 0) {
-    console.log('No command to load !')
-    return;
-  }
-
-  console.log(`Loading ${jsfiles.length} commands...`);
-
-  jsfiles.forEach((f, i) => {
-    let props = require(`./cmds/${f}`);
-    console.log(`${i + 1}: ${f} loaded !`);
-    client.commands.set(props.help.name, props);
-  });
-});
-
-client.on("message", async message => {
-
-    let messageArray = message.content.split(/\s+/g);
-    let command = messageArray[0];
-    //Arguments
-    let args = message.content.split(" ").slice(1, message.content.split(" ").length);
-  
-    if (!command.startsWith(prefix)) return;
-    let cmd = client.commands.get(command.slice((prefix).length));
-    if (cmd) cmd.run(client, message, Discord, config);
-  
-  })
+// Gestion des Interaction
+client.on('interactionCreate', /** @param {Discord.Interaction||Discord.CommandInteraction} interaction */ async (interaction) => {
+    try {
+        // Command Slash
+        if(interaction.isCommand()) {
+            // si une command est retourné
+            let command = client.commands.getCommandFromInteraction(interaction)
+            if(command) {
+                // si le membre à la permission d'utiliser la commande
+                if(command.hasPermission(interaction.member)) {
+                    // Si la commande est executable
+                    if(command.execute)
+                    {
+                        // Exécuté la commande si toutes les conditions précédente sont réuni
+                        command.execute(interaction)
+                            .then(() => Logs.info(`Commande ${Utils.getCommandStringFromInteraction(interaction)} exécuté par ${interaction.member.user.tag} dans le salon ${interaction.channel.name}`))
+                            .catch(e => Logs.error(e.toString()))
+                    }
+                    else await interaction.reply({content: `Une erreur est survenue lors de l'exécution`, ephemeral: true})
+                } else await interaction.reply({content: "'Vous n'avez pas la permission d'exécuter cette commande'", ephemeral: true})
+            } else await interaction.reply({content: 'Commande invalide', ephemeral: true})
+        }
+    } catch (e) {
+        Logs.error(e.toString())
+    }
+})
