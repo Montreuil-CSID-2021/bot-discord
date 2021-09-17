@@ -1,0 +1,9 @@
+{
+  "discord": {
+    "token": "token de connexion au bot discord",
+    "presence": {
+      "name": "Dev CSID",
+      "type": "PLAYING"
+    }
+  }
+}
