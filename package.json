@@ -1,0 +1,6 @@
+{
+  "name": "montreuil-csid-2021-bot-discord",
+  "dependencies": {
+    "discord.js": "^13.1.0"
+  }
+}
