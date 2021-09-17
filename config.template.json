@@ -1,9 +1,0 @@
-{
-  "discord": {
-    "token": "token de connexion au bot discord",
-    "presence": {
-      "name": "",
-      "type": "PLAYING|STREAMING|LISTENING|WATCHING|COMPETING"
-    }
-  }
-}

@@ -108,3 +108,4 @@ dist
 
 # Project
 config.json
+.gitignore
