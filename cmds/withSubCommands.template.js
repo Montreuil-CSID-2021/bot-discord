@@ -6,7 +6,7 @@ module.exports = {
     subCommands: [
         {
             name: "nom_sous_command",
-            description: "description de la commande sous commande",
+            description: "description de la sous commande",
             enable: true,
             options: [
                 // se référer à la doc de l'api discord :

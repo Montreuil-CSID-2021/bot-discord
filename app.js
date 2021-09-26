@@ -6,7 +6,7 @@ const Logs = require("./Class/Logs")
 
 // - - - Import Config - - - //
 const config = require('./config.json')
-const CommandManager = require("./Class/CommandManager")
+const CommandManager = require("./Class/Commands/CommandManager")
 const Utils = require("./Class/Utils")
 
 // - - - Client Discord - - - //
@@ -30,9 +30,6 @@ client.on('ready', () => {
     })
 
     client.commands = new CommandManager()
-
-    client.commands.autoAddAllCommand()
-    console.log(client.commands.commandsList)
 
     Logs.info(`client discord en ligne sur le serveur : ${client.guilds.cache.map(guild => guild.name).join(', ')}`)
 })
