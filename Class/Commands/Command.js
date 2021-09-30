@@ -47,6 +47,7 @@ class Command extends AbstractCommand {
     get slashData()
     {
         let data = super.slashData
+        data.defaultPermission = false
 
         if(this.subCommands.length > 0) {
             data.options = data.options.concat(this.subCommands.map(subCommand => subCommand.slashData))

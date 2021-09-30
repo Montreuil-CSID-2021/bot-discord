@@ -27,7 +27,6 @@ class AbstractCommand {
         data.name = this.name
         data.description = this.description
         data.options = []
-        data.defaultPermission = false
 
         if(this.options) {
             this.options.forEach(op => data.options.push(op))
