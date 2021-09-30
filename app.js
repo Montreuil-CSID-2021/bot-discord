@@ -51,6 +51,17 @@ client.on("messageCreate", async message => {
             await message.reply('Déploiement des slash commands')
         } else await message.delete()
     }
+
+    // Remove slash commands
+    if((message.content === `<@!${client.user.id}> delete slash commands`)) {
+        if(!client.application?.owner) await client.application.fetch()
+        if(client.application.owner.members.find(m => m.user.id === message.author.id)) {
+            await message.guild.commands.fetch().then(commands => commands.forEach(command => {
+                command.delete()
+            }))
+            await message.reply('Commands supprimé')
+        } else await message.delete()
+    }
 })
 
 // Gestion des Interaction

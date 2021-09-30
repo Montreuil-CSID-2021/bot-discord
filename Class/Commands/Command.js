@@ -48,8 +48,6 @@ class Command extends AbstractCommand {
     {
         let data = super.slashData
 
-        data.defaultPermission = false
-
         if(this.subCommands.length > 0) {
             data.options = data.options.concat(this.subCommands.map(subCommand => subCommand.slashData))
         }
@@ -57,8 +55,6 @@ class Command extends AbstractCommand {
         if(this.subCommandGroups.length > 0) {
             data.options = data.options.concat(this.subCommandGroups.map(subCommandGroup => subCommandGroup.slashData))
         }
-
-        if(data.options) console.log(data.options)
 
         return data
     }
@@ -72,7 +68,8 @@ class Command extends AbstractCommand {
                 permission: true
             })
         })
-        return permission
+        if(permission.length > 0) return permission
+        else return null
     }
 }
 
