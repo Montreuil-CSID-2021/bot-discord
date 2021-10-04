@@ -27,6 +27,18 @@ class Utils {
 
         return `${year}-${month}-${day}`
     }
+
+    /** @param {CommandInteraction} interaction
+     *  @return {string} commandString */
+    static getCommandStringFromInteraction(interaction) {
+        let result = interaction.commandName
+
+        let subCommand = interaction.options.getSubcommand(false)
+
+        if(subCommand) result += ` ${subCommand}`
+
+        return result
+    }
 }
 
 module.exports = Utils
