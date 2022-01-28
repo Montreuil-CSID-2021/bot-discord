@@ -15,7 +15,7 @@ class EDTManager {
     static async scrapEDT(dateOfWeek) {
         let mondayDate = Utils.getMondayOfWeek(dateOfWeek)
 
-        let potentialCache = cache[mondayDate.toLocaleDateString()]
+        let potentialCache = cache[mondayDate.toLocaleDateString("fr-FR")]
         if(potentialCache && potentialCache.expire >= new Date()) return potentialCache.data
 
         try {
@@ -36,7 +36,7 @@ class EDTManager {
             await page.screenshot({path: "lastCalendarView.png"})
             await page.click("#selectsem-button")
 
-            await page.click(`#selectsem-menu>li:has-text("${mondayDate.toLocaleDateString()}")`)
+            await page.click(`#selectsem-menu>li:has-text("${mondayDate.toLocaleDateString("fr-FR")}")`)
 
             let html = await page.content()
 
@@ -81,7 +81,7 @@ class EDTManager {
             edtDays.sort((a, b) => a.debut - b.debut)
 
             let expireCacheDate = new Date((new Date().getTime()/1000 + 3600)*1000)
-            cache[mondayDate.toLocaleDateString()] = {
+            cache[mondayDate.toLocaleDateString("fr-FR")] = {
                 expire: expireCacheDate,
                 data: edtDays
             }
@@ -105,9 +105,11 @@ class EDTManager {
                 let weekDateEnd = new Date(((dateToFetch.getTime()/1000)+(86400*4))*1000)
 
                 let embed = new MessageEmbed()
-                    .setTitle(`Semaine du ${weekDate.toLocaleDateString().split(",")[0]} au ${weekDateEnd.toLocaleDateString().split(",")[0]}`)
+                    .setTitle(`Semaine du ${weekDate.toLocaleDateString("fr-FR").split(",")[0]} au ${weekDateEnd.toLocaleDateString("fr-FR").split(",")[0]}`)
                     .setColor(`#0982AB`)
-                    .setFooter(`Emploi du temps CSID - promo 2021/2022`)
+                    .setFooter({
+                        text: `Emploi du temps CSID - promo 2021/2022`
+                    })
                     .setTimestamp()
                     .setThumbnail("https://www.iut.univ-paris8.fr/sites/default/files/LOGO%20IUT%20MONTREUIL%20Moyen.jpg");
 
@@ -117,7 +119,7 @@ class EDTManager {
                     let content = "Rien à signaler"
                     if(edt) {
                         let contentList = edt.filter(
-                            data => new Date(data.debut*1000).toLocaleDateString() === dayDate.toLocaleDateString()
+                            data => new Date(data.debut*1000).toLocaleDateString("fr-FR") === dayDate.toLocaleDateString("fr-FR")
                         ).map(
                             data => {
                                 let dateDebut = new Date(data.debut*1000)
