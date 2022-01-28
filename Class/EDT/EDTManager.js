@@ -16,9 +16,14 @@ class EDTManager {
         let mondayDate = Utils.getMondayOfWeek(dateOfWeek)
 
         let potentialCache = cache[mondayDate.toLocaleDateString("fr-FR")]
-        if(potentialCache && potentialCache.expire >= new Date()) return potentialCache.data
+        if(potentialCache && potentialCache.expire >= new Date()) {
+            Logs.info(`Récupération en cache de l'emploi du temps pour la semaine du : ${mondayDate.toLocaleDateString("fr-FR")}`)
+            return potentialCache.data
+        }
 
         try {
+            Logs.info(`Récupération sur internet de l'emploi du temps pour la semaine du : ${mondayDate.toLocaleDateString("fr-FR")}`)
+
             const browser = await webkit.launch()
             const context = await browser.newContext()
             const page = await context.newPage()
@@ -45,38 +50,42 @@ class EDTManager {
             let edtHtml = $("#quadrillage").html()
             let profList = $("#selectprof").find('option').toArray().map(el => el.children[0].data)
 
-            let edtDays = edtHtml.split("</div><div").map(el => {
-                if(!el.startsWith("<div")) el = "<div" + el
-                if(!el.endsWith("</div>")) el = el + "</div>"
-                return el
-            }).filter(el => {
-                return !el.includes("plageDIVn");
-            }).map(el => {
-                let day = {}
+            let edtDays = []
 
-                day.mat = el.split("<strong>")[1].split("</strong>")[0]
+            if(edtHtml.length > 0) {
+                edtDays = edtHtml.split("</div><div").map(el => {
+                    if(!el.startsWith("<div")) el = "<div" + el
+                    if(!el.endsWith("</div>")) el = el + "</div>"
+                    return el
+                }).filter(el => {
+                    return !el.includes("plageDIVn");
+                }).map(el => {
+                    let day = {}
 
-                let profEtSalle = el.split(`<span class="plageHG">`)
-                let profLettre = profEtSalle[1].split("</span>")[0]
-                let profName = profList.find(prof => prof.includes(profLettre))
-                day.prof = (profName) ? profName.toUpperCase() : (profEtSalle.length < 3) ? "Autonomie" : profLettre
-                day.salle = profEtSalle[profEtSalle.length-1].split("</span>")[0].split("&")[0]
+                    day.mat = el.split("<strong>")[1].split("</strong>")[0]
 
-                let style = el.split("style=\"")[1].split("\"")[0].split(";")
+                    let profEtSalle = el.split(`<span class="plageHG">`)
+                    let profLettre = profEtSalle[1].split("</span>")[0]
+                    let profName = profList.find(prof => prof.includes(profLettre))
+                    day.prof = (profName) ? profName.toUpperCase() : (profEtSalle.length < 3) ? "Autonomie" : profLettre
+                    day.salle = profEtSalle[profEtSalle.length-1].split("</span>")[0].split("&")[0]
 
-                day.debut = mondayDate.getTime()/1000
-                day.debut += 24 * 60 * 60 * style.find(s => s.includes("margin-left")).split(':')[1].split("%")[0]/80*4
-                day.debut += 60 * (style.find(s => s.includes("top")).split(':')[1].split("px")[0]-30+480)
+                    let style = el.split("style=\"")[1].split("\"")[0].split(";")
 
-                day.debutText = (new Date(day.debut * 1000)).toLocaleString()
+                    day.debut = mondayDate.getTime()/1000
+                    day.debut += 24 * 60 * 60 * style.find(s => s.includes("margin-left")).split(':')[1].split("%")[0]/80*4
+                    day.debut += 60 * (style.find(s => s.includes("top")).split(':')[1].split("px")[0]-30+480)
 
-                day.fin = day.debut
-                day.fin += 60 * (style.find(s => s.includes("height")).split(':')[1].split("px")[0])
+                    day.debutText = (new Date(day.debut * 1000)).toLocaleString()
 
-                day.finText = (new Date(day.fin * 1000)).toLocaleString()
+                    day.fin = day.debut
+                    day.fin += 60 * (style.find(s => s.includes("height")).split(':')[1].split("px")[0])
 
-                return day
-            })
+                    day.finText = (new Date(day.fin * 1000)).toLocaleString()
+
+                    return day
+                })
+            }
 
             edtDays.sort((a, b) => a.debut - b.debut)
 
