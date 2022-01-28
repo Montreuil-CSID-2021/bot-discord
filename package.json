@@ -1,6 +1,8 @@
 {
   "name": "montreuil-csid-2021-bot-discord",
   "dependencies": {
-    "discord.js": "^13.1.0"
+    "discord.js": "^13.1.0",
+    "form-data": "^4.0.0",
+    "playwright": "^1.17.2"
   }
 }

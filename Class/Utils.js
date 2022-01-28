@@ -39,6 +39,29 @@ class Utils {
 
         return result
     }
+
+    /** @param {Date} date
+     *  @return {Date} mondayDate */
+    static getMondayOfWeek(date) {
+        let day = date.getDay()
+        if(day === 0) day = 7
+        day--
+        date.setHours(0)
+        date.setMinutes(0)
+        date.setSeconds(0)
+        date.setMilliseconds(0)
+        date.setTime(((date.getTime()/1000) - (24*3600*day))*1000)
+
+        return date
+    }
+
+    /** @param {Number} number
+     *  @return {string} stringNumber */
+    static toTwoDigitTime(number) {
+        let stringNumber = number.toString()
+        if(stringNumber.length < 2) stringNumber = "0"+stringNumber
+        return stringNumber
+    }
 }
 
 module.exports = Utils

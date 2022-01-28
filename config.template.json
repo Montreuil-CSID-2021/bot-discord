@@ -10,5 +10,9 @@
     "roles": {
       "etudiant": "id role"
     }
+  },
+  "iut": {
+    "username": "",
+    "password": ""
   }
 }
