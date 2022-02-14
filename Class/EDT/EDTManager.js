@@ -62,11 +62,19 @@ class EDTManager {
                 }).map(el => {
                     let day = {}
 
-                    day.mat = el.split("<strong>")[1].split("</strong>")[0]
+                    try {
+                        day.mat = el.split("<strong>")[1].split("</strong>")[0]
+                    } catch (e) {
+                        try {
+                            day.mat = el.split('<span class="plageCTRL">')[1].split("</span>")[0]
+                        } catch (e) {
+                            day.mat = "Matière inconnu"
+                        }
+                    }
 
                     let profEtSalle = el.split(`<span class="plageHG">`)
                     let profLettre = profEtSalle[1].split("</span>")[0]
-                    let profName = profList.find(prof => prof.includes(profLettre))
+                    let profName = profList.find(prof => prof.includes(`[${profLettre}]`))
                     day.prof = (profName) ? profName.toUpperCase() : (profEtSalle.length < 3) ? "Autonomie" : profLettre
                     day.salle = profEtSalle[profEtSalle.length-1].split("</span>")[0].split("&")[0]
 
