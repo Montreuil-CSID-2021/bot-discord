@@ -1,9 +1,8 @@
 {
   "name": "montreuil-csid-2021-bot-discord",
   "dependencies": {
-    "cheerio": "^1.0.0-rc.10",
+    "axios": "^0.26.1",
     "discord.js": "^13.1.0",
-    "form-data": "^4.0.0",
-    "playwright": "^1.17.2"
+    "form-data": "^4.0.0"
   }
 }
