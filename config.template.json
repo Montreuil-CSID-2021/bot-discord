@@ -12,6 +12,8 @@
     }
   },
   "iut": {
+    "username": "",
+    "password": "",
     "token": ""
   }
 }
