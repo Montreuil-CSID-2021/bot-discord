@@ -22,6 +22,12 @@ class EDTManager {
 
     static init() {
         try {
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, 0o774)
+            }
+            if(!fs.existsSync(`${dir}/edt.json`)) {
+                fs.writeFileSync(`${dir}/edt.json`, JSON.stringify(this.cache))
+            }
             let data = fs.readFileSync(`${dir}/edt.json`, 'utf-8')
             this.cache = JSON.parse(data)
             this.cache.courses = this.cache.courses.map(courseJson => {

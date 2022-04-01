@@ -9,7 +9,7 @@ const config = require('./config.json')
 const CommandManager = require("./Class/Commands/CommandManager")
 const Utils = require("./Class/Utils")
 
-EdtManager = require("./Class/EDT/EdtManager")
+EdtManager = require("./Class/EDT/EDTManager")
 
 // - - - Client Discord - - - //
 const client = new Discord.Client({
@@ -200,7 +200,7 @@ EdtManager.events.on('coursesChange', async (removedCourses, addedCourses) => {
                 return {name: title, value: `${teacher}\n${date}\n${time}`}
             })
 
-            embeds.push(generateEmbedForCourseFields(modifiedCoursesField, '🤔 Cours modifiés', '#DC9D1D'))
+            embeds.push(generateEmbedForCourseFields(modifiedCoursesField, '😬 Cours modifiés', '#DC9D1D'))
         }
 
         await channel.send({content: "🚨 Changement détecté sur l'emploi du temps 🚨",embeds: embeds})
