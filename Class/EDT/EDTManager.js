@@ -4,61 +4,139 @@ const config = require('./../../config.json')
 const Utils = require("../Utils");
 const {MessageEmbed} = require("discord.js");
 const Logs = require("../Logs");
-const EdtDay = require('./EDTDay');
+const Course = require('./Course');
 
 const daysOfWeek = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 
+const EventEmitter = require('events')
+const fs = require("fs");
+
+let dir = `${__dirname}/../../data`
+
 class EDTManager {
-    /** @return {Promise<Array<EdtDay>>} */
+    static cache = {
+        expire: new Date(), courses: []
+    }
+
+    static events = new EventEmitter();
+
+    static init() {
+        try {
+            let data = fs.readFileSync(`${dir}/edt.json`, 'utf-8')
+            this.cache = JSON.parse(data)
+            this.cache.courses = this.cache.courses.map(courseJson => {
+                let course = new Course()
+                course.id = courseJson.id
+                course.subject = courseJson.subject
+                course.type = courseJson.type
+                course.location = courseJson.location
+                course.teacher = courseJson.teacher
+                course.start = new Date(courseJson.start)
+                course.end = new Date(courseJson.end)
+                return course
+            })
+            this.autoUpdateCache()
+        } catch (e) {}
+    }
+
+    static async updateCache() {
+        await this.getEdt()
+        Logs.info('Mise à jour du cache EDT')
+    }
+
+    static autoUpdateCache() {
+        this.updateCache().then(() => {
+            setInterval(async () => {
+                await this.updateCache()
+            }, config.iut.updateInterval)
+        })
+    }
+
+    /**
+     * @param Courses {Array<Course>}
+     */
+    static addCoursesToCache(Courses) {
+        this.compareCourses(this.cache.courses, Courses)
+        this.cache.courses = Courses;
+        this.cache.expire = (new Date()).getTime() + 3600000;
+        try {
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, 0o774)
+            }
+            fs.writeFileSync(`${dir}/edt.json`, JSON.stringify(this.cache), 'utf8');
+        } catch (e) {
+            Logs.error(e);
+        }
+    }
+
+    /**
+     * @param {Array<Course>} oldCourses
+     * @param {Array<Course>} newCourses
+     */
+    static compareCourses(oldCourses, newCourses) {
+        let now = new Date()
+        oldCourses = oldCourses.filter(oldCourse => oldCourse.end.getTime() > now.getTime())
+        newCourses = newCourses.filter(newCourse => newCourse.end.getTime() > now.getTime())
+
+        let removedCourses = oldCourses.filter(oldCourse => !newCourses.find(newCourse => newCourse.equals(oldCourse)))
+        let addedCourses = newCourses.filter(newCourse => !oldCourses.find(oldCourse => oldCourse.equals(newCourse)))
+
+        if (removedCourses.length > 0 || addedCourses.length > 0) {
+            this.events.emit('coursesChange', removedCourses, addedCourses)
+        }
+    }
+
+    /** @return {Promise<Array<Course>>} */
     static async getEdt() {
         const url = "https://agenda.iut.univ-paris8.fr"
         let data = await ical.async.fromURL(url, {
             auth: {
-                username: config.iut.username,
-                password: config.iut.password
+                username: config.iut.username, password: config.iut.password
             }
         })
 
-        /** @type {Array<EdtDay>} */
-        let days = []
+        /** @type {Array<Course>} */
+        let courses = []
 
         for (let k in data) {
             if (data.hasOwnProperty(k)) {
                 const ev = data[k]
                 if (data[k].type === "VEVENT") {
-                    let edtDay = new EdtDay()
+                    let course = new Course()
                     let splitSummary = ev.summary.split(/(Cours|TD|Controle)/)
 
 
                     if (splitSummary[2]) {
                         let brutData = splitSummary[2]
                         if (brutData.includes("SALLE VIDE")) {
-                            edtDay.location = "A distance"
+                            course.location = "A distance"
                             brutData = brutData.replace("SALLE VIDE", "").trim()
                         } else {
                             let brutDataSplit = brutData.split(' ')
-                            edtDay.location = brutDataSplit[brutDataSplit.length - 1]
-                            brutData = brutData.replace(edtDay.location, "").trim()
+                            course.location = brutDataSplit[brutDataSplit.length - 1]
+                            brutData = brutData.replace(course.location, "").trim()
                         }
 
                         if (brutData.includes('PROF VIDE')) {
-                            edtDay.teacher = "En autonomie"
+                            course.teacher = "En autonomie"
                         } else {
-                            edtDay.teacher = brutData
+                            course.teacher = brutData + (brutData.includes('NAUWYNCK') ? " ⚰" : "")
                         }
                     }
 
-                    edtDay.subject = splitSummary[0]?.trim()
-                    edtDay.type = splitSummary[1]?.trim()
-                    edtDay.start = ev.start
-                    edtDay.end = ev.end
+                    course.id = ev.uid
+                    course.subject = splitSummary[0]?.trim()
+                    course.type = splitSummary[1]?.trim()
+                    course.start = new Date(ev.start)
+                    course.end = new Date(ev.end)
 
-                    days.push(edtDay)
+                    courses.push(course)
                 }
             }
         }
 
-        return days
+        this.addCoursesToCache(courses)
+        return courses
     }
 
     /** @param {Date} dateOfWeek */
@@ -67,13 +145,13 @@ class EDTManager {
 
         let result = null
 
-        await this.getEdt().then(edt => {
+        await this.getEdt().then(brutCourses => {
             let weekDate = dateToFetch
             let weekDateEnd = new Date(((dateToFetch.getTime() / 1000) + (86400 * 4)) * 1000)
             let weedDateEndPlusOne = new Date(((dateToFetch.getTime() / 1000) + (86400 * 5)) * 1000)
 
-            let days = edt.filter(edtDay => {
-                return edtDay.start.getTime() >= weekDate.getTime() && edtDay.start.getTime() <= weedDateEndPlusOne.getTime()
+            let courses = brutCourses.filter(course => {
+                return course.start.getTime() >= weekDate.getTime() && course.start.getTime() <= weedDateEndPlusOne.getTime()
             })
 
             let embed = new MessageEmbed()
@@ -89,15 +167,11 @@ class EDTManager {
                 let time = dateToFetch.getTime() + (86400000 * i)
                 let dayDate = new Date(time)
                 let content = "Rien à signaler"
-                if (days) {
+                if (courses) {
                     // check if is the same date
-                    let contentList = days.filter(
-                        data => data.start.getDate() === dayDate.getDate() && data.start.getMonth() === dayDate.getMonth() && data.start.getFullYear() === dayDate.getFullYear()
-                    ).map(
-                        data => {
-                            return `**${data.subject}** (${data.location})\n${data.teacher}\nDe ${Utils.toTwoDigitTime(data.start.getHours())}:${Utils.toTwoDigitTime(data.start.getMinutes())} à ${Utils.toTwoDigitTime(data.end.getHours())}:${Utils.toTwoDigitTime(data.end.getMinutes())}`
-                        }
-                    )
+                    let contentList = courses.filter(data => data.start.getDate() === dayDate.getDate() && data.start.getMonth() === dayDate.getMonth() && data.start.getFullYear() === dayDate.getFullYear()).map(data => {
+                        return `**${data.subject} - ${data.type}** (${data.location})\n${data.teacher}\nDe ${Utils.toTwoDigitTime(data.start.getHours())}:${Utils.toTwoDigitTime(data.start.getMinutes())} à ${Utils.toTwoDigitTime(data.end.getHours())}:${Utils.toTwoDigitTime(data.end.getMinutes())}`
+                    })
 
                     if (contentList.length > 0) content = contentList.join("\n\n")
                 }
