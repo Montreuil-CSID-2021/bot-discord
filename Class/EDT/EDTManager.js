@@ -35,6 +35,7 @@ class EDTManager {
                 course.end = new Date(courseJson.end)
                 return course
             })
+            this.cache.expire = new Date(this.cache.expire)
             this.autoUpdateCache()
         } catch (e) {}
     }
@@ -58,7 +59,7 @@ class EDTManager {
     static addCoursesToCache(Courses) {
         this.compareCourses(this.cache.courses, Courses)
         this.cache.courses = Courses;
-        this.cache.expire = (new Date()).getTime() + 3600000;
+        this.cache.expire = new Date((new Date()).getTime() + 3600000);
         try {
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, 0o774)
@@ -144,44 +145,48 @@ class EDTManager {
         let dateToFetch = Utils.getMondayOfWeek(dateOfWeek)
 
         let result = null
+        let brutCourses = null
 
-        await this.getEdt().then(brutCourses => {
-            let weekDate = dateToFetch
-            let weekDateEnd = new Date(((dateToFetch.getTime() / 1000) + (86400 * 4)) * 1000)
-            let weedDateEndPlusOne = new Date(((dateToFetch.getTime() / 1000) + (86400 * 5)) * 1000)
+        if(this.cache.expire.getTime() > (new Date()).getTime()) {
+            brutCourses = this.cache.courses
+            console.log("Using cache")
+        } else {
+            brutCourses = await this.getEdt()
+        }
 
-            let courses = brutCourses.filter(course => {
-                return course.start.getTime() >= weekDate.getTime() && course.start.getTime() <= weedDateEndPlusOne.getTime()
-            })
+        let weekDate = dateToFetch
+        let weekDateEnd = new Date(((dateToFetch.getTime() / 1000) + (86400 * 4)) * 1000)
+        let weedDateEndPlusOne = new Date(((dateToFetch.getTime() / 1000) + (86400 * 5)) * 1000)
 
-            let embed = new MessageEmbed()
-                .setTitle(`Semaine du ${weekDate.toLocaleDateString("fr-FR").split(",")[0]} au ${weekDateEnd.toLocaleDateString("fr-FR").split(",")[0]}`)
-                .setColor(`#0982AB`)
-                .setFooter({
-                    text: `Emploi du temps CSID - promo 2021/2022`
-                })
-                .setTimestamp()
-                .setThumbnail("https://www.iut.univ-paris8.fr/sites/default/files/inline-images/LOGO%20IUT%20MONTREUIL%20BLANC%20Moyen.png");
-
-            for (let i = 0; i < 5; i++) {
-                let time = dateToFetch.getTime() + (86400000 * i)
-                let dayDate = new Date(time)
-                let content = "Rien à signaler"
-                if (courses) {
-                    // check if is the same date
-                    let contentList = courses.filter(data => data.start.getDate() === dayDate.getDate() && data.start.getMonth() === dayDate.getMonth() && data.start.getFullYear() === dayDate.getFullYear()).map(data => {
-                        return `**${data.subject} - ${data.type}** (${data.location})\n${data.teacher}\nDe ${Utils.toTwoDigitTime(data.start.getHours())}:${Utils.toTwoDigitTime(data.start.getMinutes())} à ${Utils.toTwoDigitTime(data.end.getHours())}:${Utils.toTwoDigitTime(data.end.getMinutes())}`
-                    })
-
-                    if (contentList.length > 0) content = contentList.join("\n\n")
-                }
-                embed.addField(`📅 ${daysOfWeek[i]}`, content)
-            }
-            result = embed
-
-        }).catch(() => {
-            throw new Error()
+        let courses = brutCourses.filter(course => {
+            return course.start.getTime() >= weekDate.getTime() && course.start.getTime() <= weedDateEndPlusOne.getTime()
         })
+
+        let embed = new MessageEmbed()
+            .setTitle(`Semaine du ${weekDate.toLocaleDateString("fr-FR").split(",")[0]} au ${weekDateEnd.toLocaleDateString("fr-FR").split(",")[0]}`)
+            .setColor(`#0982AB`)
+            .setFooter({
+                text: `Emploi du temps CSID - promo 2021/2022`
+            })
+            .setTimestamp()
+            .setThumbnail("https://www.iut.univ-paris8.fr/sites/default/files/inline-images/LOGO%20IUT%20MONTREUIL%20BLANC%20Moyen.png");
+
+        for (let i = 0; i < 5; i++) {
+            let time = dateToFetch.getTime() + (86400000 * i)
+            let dayDate = new Date(time)
+            let content = "Rien à signaler"
+            if (courses) {
+                // check if is the same date
+                let contentList = courses.filter(data => data.start.getDate() === dayDate.getDate() && data.start.getMonth() === dayDate.getMonth() && data.start.getFullYear() === dayDate.getFullYear()).map(data => {
+                    return `**${data.subject} - ${data.type}** (${data.location})\n${data.teacher}\nDe ${Utils.toTwoDigitTime(data.start.getHours())}:${Utils.toTwoDigitTime(data.start.getMinutes())} à ${Utils.toTwoDigitTime(data.end.getHours())}:${Utils.toTwoDigitTime(data.end.getMinutes())}`
+                })
+
+                if (contentList.length > 0) content = contentList.join("\n\n")
+            }
+            embed.addField(`📅 ${daysOfWeek[i]}`, content)
+        }
+        result = embed
+
         return result
     }
 }
